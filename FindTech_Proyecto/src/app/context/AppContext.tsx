@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import confetti from "canvas-confetti";
 import {
   CHANCE_AMOUNTS,
@@ -157,6 +165,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [chestCooldownUntil, setChestCooldownUntil] = useState<number>(0);
   const [chestResetDate, setChestResetDate] = useState<string>(getTodayDateKey());
   const [coinsEarnedToday, setCoinsEarnedToday] = useState(createEmptyDailyCoinEarnings);
+  const coinsEarnedTodayRef = useRef(coinsEarnedToday);
   const [coinsResetDate, setCoinsResetDate] = useState<string>(getTodayDateKey());
   const [balanceHoldSince, setBalanceHoldSince] = useState<number | null>(null);
   const [lastBalanceHoldCoinAt, setLastBalanceHoldCoinAt] = useState<number>(0);
@@ -212,37 +221,44 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       setChestResetDate(today);
     }
     if (coinsResetDate !== today) {
-      setCoinsEarnedToday(createEmptyDailyCoinEarnings());
+      const empty = createEmptyDailyCoinEarnings();
+      coinsEarnedTodayRef.current = empty;
+      setCoinsEarnedToday(empty);
       setCoinsResetDate(today);
     }
   }, [chestResetDate, coinsResetDate]);
 
+  useEffect(() => {
+    coinsEarnedTodayRef.current = coinsEarnedToday;
+  }, [coinsEarnedToday]);
+
   const applyCoinReward = useCallback(
     (source: CoinEarningSource, requested: number): CoinAwardResult => {
-      let award: CoinAwardResult = {
-        granted: 0,
-        requested,
-        source,
-        limited: requested > 0,
-        reason: requested > 0 ? "Sin cupo disponible." : undefined,
-      };
+      const today = getTodayDateKey();
+      if (coinsResetDate !== today) {
+        const empty = createEmptyDailyCoinEarnings();
+        coinsEarnedTodayRef.current = empty;
+        setCoinsEarnedToday(empty);
+        setCoinsResetDate(today);
+      }
 
-      setCoinsEarnedToday((prev) => {
-        const total = (Object.keys(prev) as CoinEarningSource[]).reduce(
-          (sum, key) => sum + prev[key],
-          0
-        );
-        award = computeCoinAward(source, requested, prev, total);
-        if (award.granted <= 0) return prev;
-        return { ...prev, [source]: prev[source] + award.granted };
-      });
+      const prev = coinsEarnedTodayRef.current;
+      const total = (Object.keys(prev) as CoinEarningSource[]).reduce(
+        (sum, key) => sum + prev[key],
+        0
+      );
+      const award = computeCoinAward(source, requested, prev, total);
 
       if (award.granted > 0) {
+        const next = { ...prev, [source]: prev[source] + award.granted };
+        coinsEarnedTodayRef.current = next;
+        setCoinsEarnedToday(next);
         setCoins((c) => c + award.granted);
       }
+
       return award;
     },
-    []
+    [coinsResetDate]
   );
 
   const tryEarnCoinsFromTransfer = useCallback(

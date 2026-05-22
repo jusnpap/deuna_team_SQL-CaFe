@@ -203,7 +203,10 @@ export function Transfer() {
 
             <h3 className="font-bold text-lg mb-3 mt-6">Contactos Deuna</h3>
 
-            <Card className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+            <Card
+              className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm cursor-pointer hover:bg-purple-50/40 transition-colors"
+              onClick={() => handleTransferToContact("0968904545")}
+            >
               <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                 <span className="text-purple-600 font-semibold">O</span>
               </div>
