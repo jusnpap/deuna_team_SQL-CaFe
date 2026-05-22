@@ -1,0 +1,79 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Custom Cosmetic Animations */
+@keyframes bounceSlow {
+  0%, 100% { transform: translate(-50%, -2px); }
+  50% { transform: translate(-50%, 4px); }
+}
+
+@keyframes bounceShort {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes firePulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.6), 0 0 4px rgba(239, 68, 68, 0.4);
+    border-color: #f97316;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.9), 0 0 10px rgba(239, 68, 68, 0.7);
+    border-color: #ef4444;
+  }
+}
+
+@keyframes gradientSpin {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 3s infinite ease-in-out;
+}
+
+.animate-bounce-short {
+  animation: bounceShort 1.5s infinite ease-in-out;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 12s infinite linear;
+}
+
+.animate-fire-pulse {
+  animation: firePulse 1.8s infinite ease-in-out;
+}
+
+.animate-gradient-spin {
+  background-size: 200% 200%;
+  animation: gradientSpin 3s infinite linear;
+}
+
+/* Custom keyframes for chest shaking */
+@keyframes chestShake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(-3deg) scale(1.05); }
+  20%, 40%, 60%, 80% { transform: rotate(3deg) scale(1.05); }
+}
+
+.animate-chest-shake {
+  animation: chestShake 0.6s ease-in-out;
+}
+
+/* Pulse outline effect */
+@keyframes pulseOutline {
+  0% { outline: 0px solid rgba(124, 58, 237, 0.5); }
+  100% { outline: 12px solid rgba(124, 58, 237, 0); }
+}
+
+.animate-pulse-outline {
+  animation: pulseOutline 1s infinite cubic-bezier(0.24, 0, 0.38, 1);
+}
+
