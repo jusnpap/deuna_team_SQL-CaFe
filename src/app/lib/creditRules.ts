@@ -6,6 +6,12 @@ export type ChanceAmount = (typeof CHANCE_AMOUNTS)[number];
 /** Plazo de liquidación del nanocrédito personal (Dame un Chance). */
 export const CHANCE_LOAN_TERM_DAYS = 7;
 export const CHANCE_PLATFORM_FEE_USD = 0.25;
+/** IVA sobre gastos aplicativos (Ecuador). */
+export const CHANCE_PLATFORM_FEE_IVA_RATE = 0.15;
+
+export function getChancePlatformFeeIva(): number {
+  return Math.round(CHANCE_PLATFORM_FEE_USD * CHANCE_PLATFORM_FEE_IVA_RATE * 100) / 100;
+}
 /** Pago simulado temprano (días 1–5) vs. al vencimiento (día 7). */
 export const CHANCE_EARLY_PAYMENT_MAX_DAY = 5;
 export const CHANCE_LATE_PAYMENT_DAY = CHANCE_LOAN_TERM_DAYS;
@@ -17,11 +23,16 @@ export function isEarlyChanceRepayment(repayDay: number): boolean {
 
 export function getChanceLoanTotal(amount: number): {
   platformFee: number;
+  platformFeeIva: number;
   total: number;
 } {
+  const platformFeeIva = getChancePlatformFeeIva();
+  const total =
+    Math.round((amount + CHANCE_PLATFORM_FEE_USD + platformFeeIva) * 100) / 100;
   return {
     platformFee: CHANCE_PLATFORM_FEE_USD,
-    total: amount + CHANCE_PLATFORM_FEE_USD,
+    platformFeeIva,
+    total,
   };
 }
 

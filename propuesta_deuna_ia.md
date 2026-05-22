@@ -35,7 +35,7 @@ flowchart TD
     B -->|Usuario Persona| C[Deuna Chance]
     C --> C1[Montos: $3.50 | $7.50 | $10.00]
     C --> C2[Plazo: 7 días]
-    C --> C3[Costo: $0.00 de Interés + $0.25 Gasto Aplicativo]
+    C --> C3[Costo: $0.00 Interés + $0.25 Gasto Aplicativo + IVA 15%]
     C --> C4[Aceptación transparente: UX 2 clicks y Leer más]
     
     B -->|Comercio / Veci| D[Deuna Negocio]
@@ -49,7 +49,7 @@ flowchart TD
 Diseñado para resolver emergencias inmediatas (pago de transporte, saldo móvil, medicina básica o comida).
 * **Montos fijos pre-aprobados:** $3.50, $7.50 o $10.00.
 * **Plazo:** 7 días.
-* **Estructura legal y transparente:** Para no infringir la ley de usura del BCE y al mismo tiempo hacer sostenible la tecnología, Deuna cobra **0% de interés** sobre el capital y aplica una tarifa plana única de **$0.25** bajo el concepto de **"Gastos de Aplicativos" (Tech Platform Fee)**. El usuario ve exactamente cuánto va a pagar desde el primer segundo de forma transparente.
+* **Estructura legal y transparente:** Para no infringir la ley de usura del BCE y al mismo tiempo hacer sostenible la tecnología, Deuna cobra **0% de interés** sobre el capital y aplica una tarifa plana de **$0.25** (Gastos de Aplicativos) más **IVA 15%** ($0.04), total cash-in = capital + $0.29 de cargos (p. ej. $3.50 → **$3.79**). El usuario ve el desglose desde el primer segundo.
 * **Fricción mínima (2 clics):** Los términos y condiciones están resumidos en una interfaz colapsable `[Leer más...]`. Con un check de consentimiento (Clic 1) y el botón de solicitar (Clic 2), el crédito se deposita de inmediato en la billetera virtual.
 
 ### B. Deuna Negocio (Para el "Veci")
