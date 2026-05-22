@@ -705,10 +705,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const simulateVeciQRSale = (amount: number) => {
     const now = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
 
-    // Deduct 2% sales commission
-    const commission = amount * 0.02;
+    const commission = 0;
     let retentionAmt = 0;
-    let actualCredited = amount - commission;
+    let actualCredited = amount;
     let isPaidOff = false;
 
     // Increment simulated daily sales in context
@@ -717,11 +716,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     if (veciActiveCredit) {
       retentionAmt = amount * veciActiveCredit.retentionRate;
-      actualCredited = amount - commission - retentionAmt;
+      actualCredited = amount - retentionAmt;
       const newRemaining = Math.max(0, veciActiveCredit.remaining - retentionAmt);
       isPaidOff = newRemaining === 0;
 
-      // Credit the merchant the actual credited amount (net of commission and debt retention)
       setBalance((prev) => prev + actualCredited);
 
       if (isPaidOff) {
@@ -750,19 +748,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const saleTx: Transaction = {
         id: `tx_vsale_${Date.now()}`,
         type: "recharge",
-        description: `Venta QR Recibida (Comisión Deuna 2%: -$${commission.toFixed(2)})`,
-        amount: amount - commission,
+        description: `Venta QR Recibida`,
+        amount: amount,
         date: `Hoy | ${now}`,
       };
       setTransactions((prev) => [saleTx, retentionTx, ...prev]);
     } else {
-      // Merchant receives net amount (amount minus 2% commission)
       setBalance((prev) => prev + actualCredited);
       earnXP(2);
       const saleTx: Transaction = {
         id: `tx_vsale_${Date.now()}`,
         type: "recharge",
-        description: `Venta QR Recibida (Comisión Deuna 2%: -$${commission.toFixed(2)})`,
+        description: `Venta QR Recibida`,
         amount: actualCredited,
         date: `Hoy | ${now}`,
       };

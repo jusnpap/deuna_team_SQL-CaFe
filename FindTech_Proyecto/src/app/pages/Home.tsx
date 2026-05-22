@@ -12,7 +12,6 @@ import {
   calculateVeciLoanTotals,
   getVeciRetentionRate,
   CHANCE_LOAN_TERM_DAYS,
-  CHANCE_PLATFORM_FEE_USD,
   CHANCE_EARLY_PAYMENT_MAX_DAY,
   CHANCE_LATE_PAYMENT_DAY,
   getChanceLoanTotal,
@@ -466,7 +465,7 @@ export function Home() {
 
   const registerQRSale = (amt: number) => {
     // 1. Trigger simulated payment
-    const { commission, retentionAmt, netAmt } = simulateVeciQRSale(amt);
+    const { retentionAmt, netAmt } = simulateVeciQRSale(amt);
 
     // 2. Digital payment goes directly to the bank balance (avoid double count in veciCajaTotal)
 
@@ -490,7 +489,7 @@ export function Home() {
 
     // 4. Launch toast with detailed breakdown
     setToastMessage(
-      `✔️ Venta de $${amt.toFixed(2)} registrada. Comisión Deuna 2%: -$${commission.toFixed(2)}${retentionAmt > 0 ? `, Retención Crédito: -$${retentionAmt.toFixed(2)}` : ""}. Neto acreditado: +$${netAmt.toFixed(2)}`
+      `✔️ Venta de $${amt.toFixed(2)} registrada${retentionAmt > 0 ? `. Retención crédito: -$${retentionAmt.toFixed(2)}` : ""}. Neto acreditado: +$${netAmt.toFixed(2)}`
     );
 
     // Success confetti
@@ -829,7 +828,7 @@ export function Home() {
                       <div className="text-right">
                         <p className="text-[9px] text-teal-200 font-extrabold">Saldo dame chance activo</p>
                         <p className="font-extrabold font-mono text-sm text-amber-300 leading-tight">
-                          -${veciActiveCredit.remaining.toFixed(2)}
+                          ${Math.abs(veciActiveCredit.remaining).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     ) : (
@@ -1367,8 +1366,7 @@ export function Home() {
     return null;
   };
 
-  const previewFee = CHANCE_PLATFORM_FEE_USD;
-  const previewTotal = getChanceLoanTotal(selectedLoanAmount).total;
+  const chanceCost = getChanceLoanTotal(selectedLoanAmount);
 
   return (
     <div className="min-h-full bg-gray-50 relative">
@@ -2199,13 +2197,17 @@ export function Home() {
                 <span className="font-extrabold text-purple-950">${selectedLoanAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-xs text-gray-600">
-                <span>Gastos Aplicativos:</span>
-                <span className="font-extrabold text-purple-950">${previewFee.toFixed(2)}</span>
+                <span>Comisión Base:</span>
+                <span className="font-extrabold text-purple-950">${chanceCost.platformFee.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>IVA Comisión (15%):</span>
+                <span className="font-extrabold text-purple-950">${chanceCost.platformFeeIva.toFixed(2)}</span>
               </div>
               <div className="border-t border-purple-200/50 my-1" />
               <div className="flex justify-between text-purple-950 font-black text-sm">
                 <span>Monto total a pagar (cash-in):</span>
-                <span>${previewTotal.toFixed(2)}</span>
+                <span>${chanceCost.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -2682,16 +2684,16 @@ export function Home() {
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Comisión Base:</span>
-                      <span className="font-bold text-purple-950">$0.25</span>
+                      <span className="font-bold text-purple-950">${chanceCost.platformFee.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>IVA Comisión (15%):</span>
-                      <span className="font-bold text-purple-950">$0.04</span>
+                      <span className="font-bold text-purple-950">${chanceCost.platformFeeIva.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-purple-200/50 my-1" />
                     <div className="flex justify-between font-bold text-purple-900">
                       <span>Monto a pagar (cash-in):</span>
-                      <span>${previewTotal.toFixed(2)}</span>
+                      <span>${chanceCost.total.toFixed(2)}</span>
                     </div>
                   </div>
 
