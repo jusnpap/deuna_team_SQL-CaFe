@@ -828,7 +828,7 @@ export function Home() {
                       <div className="text-right">
                         <p className="text-[9px] text-teal-200 font-extrabold">Saldo dame chance activo</p>
                         <p className="font-extrabold font-mono text-sm text-amber-300 leading-tight">
-                          -${veciActiveCredit.remaining.toFixed(2)}
+                          ${Math.abs(veciActiveCredit.remaining).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     ) : (
