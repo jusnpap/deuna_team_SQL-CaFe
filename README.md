@@ -7,6 +7,7 @@ Repositorio del equipo Deuna — SQL / CaFe.
 | Carpeta | Descripción |
 |---------|-------------|
 | **FindTech_Proyecto** | Prototipo **FINS** (Deuna): microcréditos, Tu nivel deuna, gamificación (coins, cofres, ruleta) y modo Veci. Stack: React + Vite + TypeScript. |
+| **Notebook_Jupyter** | Documentación académica en Jupyter: `documentacion_deuna_fins.ipynb` (reglas de negocio y simulaciones). |
 
 ## Inicio rápido
 
