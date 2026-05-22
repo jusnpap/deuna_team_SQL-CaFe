@@ -1,14 +1,25 @@
-import { ArrowLeft, Eye, EyeOff, ExternalLink } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, ExternalLink, PiggyBank } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
 import { useApp } from "../context/AppContext";
+import { MIN_BALANCE_FOR_SAVINGS_COIN } from "../lib/coinLimits";
+
+function formatCooldown(ms: number): string {
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
 
 export function Billetera() {
   const navigate = useNavigate();
-  const { balance, isBalanceHidden, setIsBalanceHidden } = useApp();
+  const { balance, isBalanceHidden, setIsBalanceHidden, savingsCoinMsRemaining } = useApp();
 
   const formatMoney = (value: number) =>
     value.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const qualifiesForSavings = balance >= MIN_BALANCE_FOR_SAVINGS_COIN;
+  const savingsReady = qualifiesForSavings && savingsCoinMsRemaining === 0;
 
   return (
     <div className="min-h-full bg-gray-50">
@@ -23,6 +34,28 @@ export function Billetera() {
       </div>
 
       <div className="px-6 py-6">
+        <Card className="bg-gradient-to-br from-amber-50 to-purple-50 rounded-2xl p-4 border border-amber-100 mb-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <PiggyBank className="w-5 h-5 text-amber-700" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-extrabold text-purple-950 mb-1">Bono Ahorro Deuna Coins</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Mantén al menos <strong>${MIN_BALANCE_FOR_SAVINGS_COIN.toFixed(2)}</strong> en tu cuenta durante{" "}
+                <strong>24 horas seguidas</strong> y recibe <strong>+1 Coin</strong> (máximo 1 por día).
+              </p>
+              <p className="text-[10px] font-bold mt-2 text-purple-700">
+                {!qualifiesForSavings
+                  ? `Te faltan $${(MIN_BALANCE_FOR_SAVINGS_COIN - balance).toFixed(2)} para iniciar el conteo.`
+                  : savingsReady
+                  ? "¡Listo! Tu coin se acreditará en breve si no alcanzaste el límite diario."
+                  : `Progreso: faltan ${formatCooldown(savingsCoinMsRemaining)} con saldo ≥ $${MIN_BALANCE_FOR_SAVINGS_COIN}.`}
+              </p>
+            </div>
+          </div>
+        </Card>
+
         <h2 className="text-2xl font-bold mb-4">Cuentas</h2>
 
         <div className="space-y-3 mb-6">

@@ -35,7 +35,7 @@ export function Profile() {
     { id: "accessory_cowboy", label: "Sombrero Vaquero", desc: "Premio intermedio en la Ruleta.", preview: "🤠", rarity: "raro" },
     { id: "accessory_chef", label: "Sombrero de Chef", desc: "Exclusivo de la Veci por ventas altas.", preview: "👨‍🍳", rarity: "epico" },
     { id: "accessory_crown", label: "Corona de Elite", desc: "Top 10 usuarios activos o en Cofre Oro.", preview: "👑", rarity: "legendario" },
-    { id: "accessory_diamond", label: "Diamante de Logro", desc: "Alcanza Score 100 por primera vez.", preview: "💎", rarity: "legendario" }
+    { id: "accessory_diamond", label: "Diamante de Logro", desc: "Alcanza nivel deuna 100 por primera vez.", preview: "💎", rarity: "legendario" }
   ];
 
   const getRarityBadge = (rarity: string) => {
@@ -73,7 +73,7 @@ export function Profile() {
           <ShieldCheck className="w-5 h-5 text-amber-400 fill-amber-400" />
         </h1>
         <p className="text-purple-200 text-[10px] mb-1">
-          Nivel Deuna: {getPulsoTierLabel(pulsoScore)} ({pulsoScore} pts) | Deuna Coins: 🪙 {coins}
+          Tu nivel deuna: {getPulsoTierLabel(pulsoScore)} ({pulsoScore} pts) | Deuna Coins: 🪙 {coins}
         </p>
         <p className="text-purple-200 text-[10px] opacity-75">Versión 5.2.74 - Dame un Chance Edition</p>
       </div>
@@ -150,12 +150,13 @@ export function Profile() {
           </button>
         </div>
 
-        <div className="flex justify-center pb-8 opacity-40 grayscale">
-          <img
-            src="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=120&h=40&fit=crop"
-            alt="Deuna Logo"
-            className="h-8"
-          />
+        <div className="flex justify-center pb-8">
+          <div className="flex items-center gap-2 rounded-full bg-purple-50 px-4 py-2 border border-purple-100">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-purple-400 text-xs font-black text-white">
+              d!
+            </span>
+            <span className="text-[11px] font-bold tracking-wide text-purple-700">DEUNA</span>
+          </div>
         </div>
       </div>
 

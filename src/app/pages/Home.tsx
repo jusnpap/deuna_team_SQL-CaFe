@@ -11,6 +11,11 @@ import {
   getPulsoTierLabel,
   calculateVeciLoanTotals,
   getVeciRetentionRate,
+  CHANCE_LOAN_TERM_DAYS,
+  CHANCE_PLATFORM_FEE_USD,
+  CHANCE_EARLY_PAYMENT_MAX_DAY,
+  CHANCE_LATE_PAYMENT_DAY,
+  getChanceLoanTotal,
 } from "../lib/creditRules";
 // @ts-ignore
 import confetti from "canvas-confetti";
@@ -31,6 +36,7 @@ export function Home() {
     paymentRepaySpeed,
     clearJustPaidCredit,
     rechargeBalance,
+    tryEarnCoinsFromTransfer,
     requestSalvavidas,
     paySalvavidas,
     payWithQR,
@@ -460,7 +466,7 @@ export function Home() {
 
   const registerQRSale = (amt: number) => {
     // 1. Trigger simulated payment
-    const { commission, retentionAmt, netAmt } = simulateVeciQRSale(amt);
+    const { retentionAmt, netAmt } = simulateVeciQRSale(amt);
 
     // 2. Digital payment goes directly to the bank balance (avoid double count in veciCajaTotal)
 
@@ -484,7 +490,7 @@ export function Home() {
 
     // 4. Launch toast with detailed breakdown
     setToastMessage(
-      `✔️ Venta de $${amt.toFixed(2)} registrada. Comisión Deuna 2%: -$${commission.toFixed(2)}${retentionAmt > 0 ? `, Retención Crédito: -$${retentionAmt.toFixed(2)}` : ""}. Neto acreditado: +$${netAmt.toFixed(2)}`
+      `✔️ Venta de $${amt.toFixed(2)} registrada${retentionAmt > 0 ? `. Retención crédito: -$${retentionAmt.toFixed(2)}` : ""}. Neto acreditado: +$${netAmt.toFixed(2)}`
     );
 
     // Success confetti
@@ -857,8 +863,15 @@ export function Home() {
 
                     <button 
                       onClick={() => {
-                        setToastMessage("✔️ Transferencia exitosa. Se enviaron $15,00 a tu vendedor.");
-                        setTimeout(() => setToastMessage(null), 3000);
+                        const award = tryEarnCoinsFromTransfer();
+                        let msg = "✔️ Transferencia exitosa. Se enviaron $15,00 a tu vendedor.";
+                        if (award.granted > 0) {
+                          msg += ` +${award.granted} Deuna Coin.`;
+                        } else if (award.limited) {
+                          msg += " Límite diario de coins por transferencias alcanzado.";
+                        }
+                        setToastMessage(msg);
+                        setTimeout(() => setToastMessage(null), 3500);
                       }}
                       className="flex flex-col items-center gap-1.5 group"
                     >
@@ -980,7 +993,7 @@ export function Home() {
                     >
                       <span className="text-xl block mb-1">🥉</span>
                       <p className="text-[9px] font-black text-orange-800">Bronce</p>
-                      <p className="text-[8px] text-orange-600 font-bold">5 coins</p>
+                      <p className="text-[8px] text-orange-600 font-bold">hasta 1 coin</p>
                     </button>
                     <button 
                       onClick={() => {
@@ -1001,7 +1014,7 @@ export function Home() {
                     >
                       <span className="text-xl block mb-1">{veciRank !== "Bronce" ? "🥈" : "🔒"}</span>
                       <p className="text-[9px] font-black text-slate-700">Plata</p>
-                      <p className="text-[8px] text-slate-500 font-bold">15 coins</p>
+                      <p className="text-[8px] text-slate-500 font-bold">hasta 1 coin</p>
                     </button>
                     <button 
                       onClick={() => {
@@ -1022,7 +1035,7 @@ export function Home() {
                     >
                       <span className="text-xl block mb-1">{veciRank === "Oro" ? "🥇" : "🔒"}</span>
                       <p className="text-[9px] font-black text-amber-800">Oro</p>
-                      <p className="text-[8px] text-amber-600 font-bold">50 coins</p>
+                      <p className="text-[8px] text-amber-600 font-bold">hasta 2 coins</p>
                     </button>
                   </div>
 
@@ -1354,9 +1367,8 @@ export function Home() {
     return null;
   };
 
-  // Flat fee for platform/application service (gastos aplicativos)
-  const previewInterest = 0.2875;
-  const previewTotal = selectedLoanAmount + previewInterest;
+  const previewFee = CHANCE_PLATFORM_FEE_USD;
+  const previewTotal = getChanceLoanTotal(selectedLoanAmount).total;
 
   return (
     <div className="min-h-full bg-gray-50 relative">
@@ -1703,7 +1715,7 @@ export function Home() {
                 <div className="space-y-0.5">
                   <div className="flex justify-between items-center text-[8px] text-gray-500 font-extrabold">
                     <span className="text-purple-600">XP: {xp}/100</span>
-                    <span>Score de Nivel: {pulsoScore}</span>
+                    <span>Tu nivel deuna: {pulsoScore}</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-150 rounded-full overflow-hidden border border-gray-200/50">
                     <div
@@ -1749,7 +1761,7 @@ export function Home() {
             {paymentRepaySpeed === "early" ? (
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">
-                  ¡Excelente! Pagaste de forma **temprana** (Día 8). Esto demuestra un flujo estable y compromiso real.
+                  ¡Excelente! Pagaste de forma **temprana** (día {CHANCE_EARLY_PAYMENT_MAX_DAY} o antes). Esto demuestra un flujo estable y compromiso real.
                 </p>
                 <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl text-xs font-black border border-emerald-150 inline-block">
                   🚀 ¡Tu Cupo de Crédito ha crecido al siguiente nivel!
@@ -1758,7 +1770,7 @@ export function Home() {
             ) : (
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">
-                  Liquidado con éxito (Día 14). Saldo saldado correctamente pero **pago tardío**. Tu límite se mantiene igual.
+                  Liquidado con éxito (día {CHANCE_LATE_PAYMENT_DAY}). Saldo saldado correctamente pero **pago tardío**. Tu límite se mantiene igual.
                 </p>
                 <div className="bg-amber-50 text-amber-800 p-2.5 rounded-xl text-xs font-black border border-amber-150 inline-block">
                   ℹ️ Paga antes del Día 10 para aumentar tu límite
@@ -1773,7 +1785,7 @@ export function Home() {
               </div>
               <div className="border-r border-purple-200" />
               <div>
-                <p className="text-xs text-gray-500">Score de Nivel</p>
+                <p className="text-xs text-gray-500">Tu nivel deuna</p>
                 <p className="text-base font-bold text-emerald-600">+15 Puntos</p>
               </div>
             </div>
@@ -1881,7 +1893,7 @@ export function Home() {
             {activeProfileMode === "personal" ? (
               <Button
                 className="bg-purple-700 hover:bg-purple-800 text-white rounded-lg px-4 py-2 font-bold flex items-center gap-1"
-                onClick={() => handleRecarga(8)} // Simulated early pay on Day 8
+                onClick={() => handleRecarga(CHANCE_EARLY_PAYMENT_MAX_DAY)}
               >
                 + $20
               </Button>
@@ -1944,7 +1956,7 @@ export function Home() {
             <span className="text-[10px] text-center text-gray-600 font-semibold leading-tight">Otro banco</span>
           </button>
 
-          <button className="flex flex-col items-center gap-1.5 group" onClick={() => handleRecarga(8)}>
+          <button className="flex flex-col items-center gap-1.5 group" onClick={() => handleRecarga(CHANCE_EARLY_PAYMENT_MAX_DAY)}>
             <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center border border-gray-100 transition-all group-hover:scale-105">
               <WalletIcon className="w-5 h-5 text-purple-600" />
             </div>
@@ -2048,7 +2060,7 @@ export function Home() {
           <Card className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-100 shadow-2xl relative animate-in zoom-in-95">
             <h3 className="text-lg font-bold text-purple-900 mb-2">Simular Compra con QR Deuna</h3>
             <p className="text-xs text-gray-600 mb-4">
-              Simula que escaneas un código QR de un comercio para pagar. Esto descontará saldo, te dará **+3 XP**, y aumentará tu **Score de Nivel**!
+              Simula que escaneas un código QR de un comercio para pagar. Esto descontará saldo, te dará **+3 XP**, y aumentará tu **nivel deuna**!
             </p>
 
             <div className="space-y-4 mb-4">
@@ -2188,7 +2200,7 @@ export function Home() {
               </div>
               <div className="flex justify-between text-xs text-gray-600">
                 <span>Gastos Aplicativos:</span>
-                <span className="font-extrabold text-purple-950">${previewInterest.toFixed(2)}</span>
+                <span className="font-extrabold text-purple-950">${previewFee.toFixed(2)}</span>
               </div>
               <div className="border-t border-purple-200/50 my-1" />
               <div className="flex justify-between text-purple-950 font-black text-sm">
@@ -2220,11 +2232,11 @@ export function Home() {
                   </p>
                   
                   <p>
-                    <strong className="text-purple-950">CLÁUSULA SEGUNDA (Plazo incondicional de 15 días):</strong> El plazo total para la liquidación del préstamo es de 15 días calendario. Al no existir cobros manuales agresivos de parte de Deuna, el solicitante asume la total responsabilidad de mantener saldo suficiente para su débito.
+                    <strong className="text-purple-950">CLÁUSULA SEGUNDA (Plazo incondicional de {CHANCE_LOAN_TERM_DAYS} días):</strong> El plazo total para la liquidación del préstamo es de {CHANCE_LOAN_TERM_DAYS} días calendario. Al no existir cobros manuales agresivos de parte de Deuna, el solicitante asume la total responsabilidad de mantener saldo suficiente para su débito.
                   </p>
                   
                   <p>
-                    <strong className="text-purple-950">CLÁUSULA TERCERA (Salud y Score Conductual):</strong> El impago oportuno tendrá un impacto de <span className="font-bold text-red-600">reunión penal de -20 puntos en su Score de Nivel Deuna</span>, la congelación inmediata de su límite de crédito, y la pérdida incondicional de su racha de actividad y cosméticos de perfil.
+                    <strong className="text-purple-950">CLÁUSULA TERCERA (Salud y conducta financiera):</strong> El impago oportuno tendrá un impacto de <span className="font-bold text-red-600">penalización de -20 puntos en tu nivel deuna</span>, la congelación inmediata de su límite de crédito, y la pérdida incondicional de su racha de actividad y cosméticos de perfil.
                   </p>
 
                   <p>
@@ -2395,7 +2407,7 @@ export function Home() {
                         </p>
                         
                         <p>
-                          <strong className="text-purple-900">CLÁUSULA TERCERA (Comportamiento y Cupos Comerciales):</strong> El cumplimiento y amortización oportuna incrementará el Score de Confianza del Comercio, permitiéndole expandir su cupo comercial hasta <span className="font-bold text-emerald-700">$300</span>. El impago congelará de inmediato la línea.
+                          <strong className="text-purple-900">CLÁUSULA TERCERA (Comportamiento y Cupos Comerciales):</strong> El cumplimiento y amortización oportuna incrementará tu nivel deuna del comercio, permitiéndole expandir su cupo comercial hasta <span className="font-bold text-emerald-700">$300</span>. El impago congelará de inmediato la línea.
                         </p>
 
                         <p>
@@ -2544,7 +2556,7 @@ export function Home() {
                       Total a pagar: <span className="font-extrabold text-red-600 font-mono">${activeCredit.total.toFixed(2)}</span>
                     </p>
                     <p className="text-[10px] text-gray-500 mt-1 font-semibold">
-                      Plazo: 15 días | Se descuenta automáticamente en tu próxima recarga.
+                      Plazo: {CHANCE_LOAN_TERM_DAYS} días | Se descuenta automáticamente en tu próxima recarga.
                     </p>
                   </div>
                 </div>
@@ -2568,7 +2580,7 @@ export function Home() {
                     ⚠️ Si no pagas en 3 días perderás tu Cofre Diamante del jueves, tu racha de 12 días y tu borde plateado equipado.
                   </p>
                   <p className="text-emerald-700 font-bold">
-                    💡 ¡Paga hoy y asegura tu Cofre Diamante diario +35 XP +15 de Score de Nivel!
+                    💡 ¡Paga hoy y asegura tu Cofre Diamante diario +35 XP +15 en tu nivel deuna!
                   </p>
                 </div>
 
@@ -2577,17 +2589,17 @@ export function Home() {
                   <Button
                     disabled={balance < activeCredit.total}
                     className="flex-1 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-[10px] font-extrabold py-2.5 shadow-sm disabled:opacity-40"
-                    onClick={() => handlePaySalvavidas(8)} // Simulated early manual payoff
+                    onClick={() => handlePaySalvavidas(CHANCE_EARLY_PAYMENT_MAX_DAY)}
                   >
-                    Pagar hoy (Día 8 - ¡Sube Cupo!)
+                    Pagar hoy (Día {CHANCE_EARLY_PAYMENT_MAX_DAY} - ¡Sube Cupo!)
                   </Button>
                   <Button
                     disabled={balance < activeCredit.total}
                     variant="outline"
                     className="flex-1 rounded-xl text-[10px] font-bold text-gray-700 bg-white"
-                    onClick={() => handlePaySalvavidas(14)} // Simulated late manual payoff
+                    onClick={() => handlePaySalvavidas(CHANCE_LATE_PAYMENT_DAY)}
                   >
-                    Pagar tarde (Día 14)
+                    Pagar tarde (Día {CHANCE_LATE_PAYMENT_DAY})
                   </Button>
                 </div>
               </Card>
@@ -2769,7 +2781,7 @@ export function Home() {
                     Cada vez que un cliente te pague con QR Deuna, descontaremos el <strong className="text-purple-950 font-bold">{(veciActiveCredit.retentionRate * 100).toFixed(0)}%</strong> para abonar a esta deuda al instante. ¡Sin que tengas que mover un dedo!
                   </p>
                   <p className="text-emerald-700 font-semibold">
-                    💡 ¡Paga tu cuota restante manualmente o simula ventas QR abajo para ver crecer tu Score de Confianza!
+                    💡 ¡Paga tu cuota restante manualmente o simula ventas QR abajo para ver crecer tu nivel deuna!
                   </p>
                 </div>
 

@@ -1,27 +1,59 @@
-/** Reglas de negocio: Pulso Deuna (personas) y cupo IA (Veci). */
+/** Reglas de negocio: Tu nivel deuna (personas) y cupo IA (Veci). */
 
 export const CHANCE_AMOUNTS = [3.5, 7.5, 10] as const;
 export type ChanceAmount = (typeof CHANCE_AMOUNTS)[number];
+
+/** Plazo de liquidación del nanocrédito personal (Dame un Chance). */
+export const CHANCE_LOAN_TERM_DAYS = 7;
+export const CHANCE_PLATFORM_FEE_USD = 0.25;
+/** Pago simulado temprano (días 1–5) vs. al vencimiento (día 7). */
+export const CHANCE_EARLY_PAYMENT_MAX_DAY = 5;
+export const CHANCE_LATE_PAYMENT_DAY = CHANCE_LOAN_TERM_DAYS;
+export const CHANCE_DEFAULT_SIMULATED_PAY_DAY = 5;
+
+export function isEarlyChanceRepayment(repayDay: number): boolean {
+  return repayDay <= CHANCE_EARLY_PAYMENT_MAX_DAY;
+}
+
+export function getChanceLoanTotal(amount: number): {
+  platformFee: number;
+  total: number;
+} {
+  return {
+    platformFee: CHANCE_PLATFORM_FEE_USD,
+    total: amount + CHANCE_PLATFORM_FEE_USD,
+  };
+}
 
 export type ChestTier = "bronce" | "plata" | "diamante";
 
 export type RuletaPrize = {
   label: string;
-  type: "coins" | "cosmetic" | "xp";
+  type: "coins" | "cosmetic" | "xp" | "empty";
   value: number | string;
 };
 
-/** Premios en el mismo orden que los 8 segmentos de la ruleta (sentido horario desde arriba). */
+/** 8 segmentos: solo 1 y 3 coins + espacios vacíos (sentido horario desde arriba). */
 export const RULETA_PRIZES: readonly RuletaPrize[] = [
-  { label: "+$2.00 Coins", type: "coins", value: 2 },
-  { label: "Borde Arcoíris 🌈", type: "cosmetic", value: "border_rainbow" },
-  { label: "Corona de Elite 👑", type: "cosmetic", value: "accessory_crown" },
-  { label: "Sombrero Vaquero 🤠", type: "cosmetic", value: "accessory_cowboy" },
-  { label: "+$5.00 Coins", type: "coins", value: 5 },
-  { label: "+20 XP", type: "xp", value: 20 },
-  { label: "Borde de Fuego 🔥", type: "cosmetic", value: "border_fire" },
-  { label: "+50 XP Bonus", type: "xp", value: 50 },
+  { label: "+1 Coin", type: "coins", value: 1 },
+  { label: "Sin premio", type: "empty", value: 0 },
+  { label: "+3 Coins", type: "coins", value: 3 },
+  { label: "Sin premio", type: "empty", value: 0 },
+  { label: "+1 Coin", type: "coins", value: 1 },
+  { label: "+3 Coins", type: "coins", value: 3 },
+  { label: "Sin premio", type: "empty", value: 0 },
+  { label: "+1 Coin", type: "coins", value: 1 },
 ] as const;
+
+/** Recompensas base del cofre (monedas sujetas a límites diarios en AppContext). */
+export const CHEST_REWARDS: Record<
+  ChestTier,
+  { xp: number; coins: number; spins: number; cosmeticChance: number }
+> = {
+  bronce: { xp: 10, coins: 1, spins: 0, cosmeticChance: 0 },
+  plata: { xp: 20, coins: 1, spins: 0, cosmeticChance: 0.12 },
+  diamante: { xp: 35, coins: 2, spins: 0, cosmeticChance: 0.18 },
+};
 
 export const RULETA_SEGMENT_DEG = 360 / RULETA_PRIZES.length;
 
@@ -44,7 +76,7 @@ export function canRequestChance(pulsoScore: number): boolean {
   return pulsoScore > 30;
 }
 
-/** Monto máximo de Dame un Chance según Pulso Deuna. */
+/** Monto máximo de Dame un Chance según Tu nivel deuna. */
 export function getMaxChanceAmount(pulsoScore: number): ChanceAmount | 0 {
   if (pulsoScore <= 30) return 0;
   if (pulsoScore <= 55) return 3.5;
@@ -91,7 +123,7 @@ export function calculateVeciLoanTotals(
   return { interest, insurance, total: amount + interest + insurance };
 }
 
-/** Retención QR: 6% con buen historial o Pulso alto; si no, 8%. */
+/** Retención QR: 6% con buen historial o nivel deuna alto; si no, 8%. */
 export function getVeciRetentionRate(
   pulsoScore: number,
   consecutiveGoodPayments: number

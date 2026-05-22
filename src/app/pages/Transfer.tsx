@@ -3,10 +3,25 @@ import { ArrowLeft, Search, QrCode } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { useApp } from "../context/AppContext";
 
 export function Transfer() {
   const navigate = useNavigate();
+  const { tryEarnCoinsFromTransfer } = useApp();
   const [activeFilter, setActiveFilter] = useState("deuna");
+  const [transferNotice, setTransferNotice] = useState<string | null>(null);
+
+  const handleTransferToContact = (phone: string) => {
+    const award = tryEarnCoinsFromTransfer();
+    if (award.granted > 0) {
+      setTransferNotice(`Transferencia simulada a ${phone}. +${award.granted} Coin (máx. 6/día).`);
+    } else {
+      setTransferNotice(
+        award.reason ?? `Transferencia simulada a ${phone}. Límite diario de coins alcanzado.`
+      );
+    }
+    setTimeout(() => setTransferNotice(null), 4000);
+  };
 
   const deunaContacts = [
     { id: 1, name: "O", phone: "0968904545" },
@@ -29,6 +44,11 @@ export function Transfer() {
       </div>
 
       <div className="px-6 py-4">
+        {transferNotice && (
+          <p className="text-xs font-semibold text-purple-800 bg-purple-50 border border-purple-100 rounded-xl px-3 py-2 mb-3">
+            {transferNotice}
+          </p>
+        )}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
@@ -111,7 +131,11 @@ export function Transfer() {
 
             <div className="space-y-2 mb-6">
               {deunaContacts.map((contact) => (
-                <Card key={contact.id} className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                <Card
+                  key={contact.id}
+                  className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm cursor-pointer hover:bg-purple-50/40 transition-colors"
+                  onClick={() => handleTransferToContact(contact.phone)}
+                >
                   <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                     <span className="text-purple-600 font-semibold">
                       {contact.name || contact.phone[0]}

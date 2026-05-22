@@ -18,7 +18,6 @@ export function Beneficios() {
     xp,
     coins,
     ruletaSpins,
-    chestsOpenedToday,
     unlockedCosmetics,
     openChest,
     spinRuleta,
@@ -120,7 +119,7 @@ export function Beneficios() {
   const currentTier = getTierDetails(pulsoScore);
 
   const handleOpenChest = (tier: "bronce" | "plata" | "diamante") => {
-    if (chestsOpenedToday[tier]) return;
+    if (isChestOnCooldown) return;
 
     // Shake chest animation trigger
     setShakingChest(tier);
@@ -276,7 +275,7 @@ export function Beneficios() {
         bgColor: "bg-orange-50/50",
         badgeBg: "bg-orange-100 text-orange-800",
         description: "Recompensas básicas por actividad diaria. ¡Mantén tu racha!",
-        rewards: "✨ +10 XP | 🪙 +2 Deuna Coins"
+        rewards: "✨ +10 XP | 🪙 hasta +1 Coin | ⏱️ cada 12 h"
       };
     } else if (tier === "plata") {
       return {
@@ -288,7 +287,7 @@ export function Beneficios() {
         bgColor: "bg-slate-50/50",
         badgeBg: "bg-slate-100 text-slate-800",
         description: "Recompensas intermedias por mantener un Nivel Plata Activo (56-75).",
-        rewards: "✨ +25 XP | 🪙 +5 Coins | 🎟️ +1 Boleto | 🌈 Probabilidad de Cosmético"
+        rewards: "✨ +20 XP | 🪙 hasta +1 Coin | 🎁 12% cosmético | ⏱️ cada 12 h"
       };
     } else {
       return {
@@ -299,14 +298,13 @@ export function Beneficios() {
         hoverBorder: "hover:border-cyan-400",
         bgColor: "bg-cyan-50/50",
         badgeBg: "bg-cyan-100 text-cyan-800",
-        description: "¡Máximo nivel! Recompensas legendarias para usuarios Nivel Diamante (Score 76+).",
-        rewards: "✨ +50 XP | 🪙 +15 Coins | 🎟️ +1 Boleto | 👑 Alta Probabilidad de Cosmético Raro"
+        description: "¡Máximo nivel! Recompensas legendarias para usuarios Nivel Diamante (Tu nivel deuna 76+).",
+        rewards: "✨ +35 XP | 🪙 hasta +2 Coins | 👑 18% cosmético raro | ⏱️ cada 12 h"
       };
     }
   };
 
   const chestDetails = getChestDetails(currentChestTier);
-  const opened = chestsOpenedToday[currentChestTier];
   const isShaking = shakingChest === currentChestTier;
 
   return (
@@ -358,9 +356,9 @@ export function Beneficios() {
             
             <div className="max-w-sm mx-auto">
               <Card
-                onClick={() => !opened && !isChestOnCooldown && handleOpenChest(currentChestTier)}
+                onClick={() => !isChestOnCooldown && handleOpenChest(currentChestTier)}
                 className={`p-6 text-center flex flex-col items-center justify-between cursor-pointer border-2 relative transition-all shadow-md group ${
-                  opened || isChestOnCooldown
+                  isChestOnCooldown
                     ? "bg-gray-50 border-gray-100 opacity-70 pointer-events-none"
                     : isShaking
                     ? `${chestDetails.borderColor} ${chestDetails.bgColor} animate-chest-shake`
@@ -373,7 +371,7 @@ export function Beneficios() {
                 </span>
 
                 <div className="my-3 flex flex-col items-center">
-                  <span className={`text-6xl mb-4 block filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)] transition-transform group-hover:scale-110 ${opened || isChestOnCooldown ? "grayscale opacity-50" : ""}`}>
+                  <span className={`text-6xl mb-4 block filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)] transition-transform group-hover:scale-110 ${isChestOnCooldown ? "grayscale opacity-50" : ""}`}>
                     {chestDetails.icon}
                   </span>
                   <h3 className={`text-base font-black ${chestDetails.textColor} tracking-tight mb-1`}>
@@ -394,9 +392,7 @@ export function Beneficios() {
                 <div className="mt-4 w-full">
                   <span className="text-[10px] uppercase font-black tracking-widest text-purple-700 block text-center animate-pulse">
                     {isChestOnCooldown 
-                      ? `⏳ Cooldown: ${formatCooldown(cooldownRemainingMs)}`
-                      : opened
-                      ? "✓ ABIERTO HOY (Vuelve mañana)"
+                      ? `⏳ Próximo cofre en ${formatCooldown(cooldownRemainingMs)}`
                       : "⚡ ¡TOCA PARA RECLAMAR PREMIO!"}
                   </span>
                 </div>
@@ -408,7 +404,7 @@ export function Beneficios() {
           <Card className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center">
             <h2 className="text-sm font-extrabold text-purple-950 mb-4 flex items-center gap-1.5 self-start">
               <Trophy className="w-4 h-4 text-purple-600" />
-              Tu Nivel Deuna
+              Tu nivel deuna
             </h2>
             
             {/* 360-Degree Complete Progress Circle */}
@@ -447,7 +443,7 @@ export function Beneficios() {
                   {pulsoScore} pts
                 </span>
                 <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                  Score de Nivel
+                  Tu nivel deuna
                 </span>
               </div>
             </div>
@@ -460,7 +456,7 @@ export function Beneficios() {
             {/* Quick Testing Toggles (Simulator Control) */}
             <div className="w-full bg-purple-50/50 rounded-xl p-3 border border-purple-100/50">
               <p className="text-[10px] font-bold text-purple-700 mb-2 uppercase text-center tracking-wider">
-                Control de Simulación (Ajusta tu Score de Nivel)
+                Control de Simulación (Ajusta tu nivel deuna)
               </p>
               <div className="flex gap-2 justify-center">
                 <button
@@ -633,8 +629,11 @@ export function Beneficios() {
               <Sparkles className="w-4 h-4 text-purple-600 animate-pulse" />
               Ruleta de la Fortuna Deuna
             </h2>
-            <p className="text-xs text-gray-500 mb-6 leading-relaxed self-start">
-              Gana 1 boleto cada vez que acumules 100 XP por tus transacciones y pagos de crédito.
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed self-start">
+              Gana 1 boleto cada 100 XP. Premios: +1 o +3 Coins, o espacio vacío. Límite: 12 coins/día por ruleta.
+            </p>
+            <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-6 self-start leading-relaxed">
+              💰 Mantén <strong>$5+</strong> en Billetera <strong>24 h</strong> seguidas → <strong>+1 Coin</strong>/día. Límite global: 30 coins/día.
             </p>
 
             {/* Spinning Wheel Graphic */}
@@ -655,33 +654,28 @@ export function Beneficios() {
                 }}
               >
                 <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Wheel partitions */}
                   <g>
                     <path d="M50,50 L50,0 A50,50 0 0,1 85.3,14.6 Z" fill="#7c3aed" />
-                    <path d="M50,50 L85.3,14.6 A50,50 0 0,1 100,50 Z" fill="#f97316" />
+                    <path d="M50,50 L85.3,14.6 A50,50 0 0,1 100,50 Z" fill="#9ca3af" />
                     <path d="M50,50 L100,50 A50,50 0 0,1 85.3,85.3 Z" fill="#10b981" />
-                    <path d="M50,50 L85.3,85.3 A50,50 0 0,1 50,100 Z" fill="#3b82f6" />
+                    <path d="M50,50 L85.3,85.3 A50,50 0 0,1 50,100 Z" fill="#9ca3af" />
                     <path d="M50,50 L50,100 A50,50 0 0,1 14.6,85.3 Z" fill="#7c3aed" />
-                    <path d="M50,50 L14.6,85.3 A50,50 0 0,1 0,50 Z" fill="#eab308" />
-                    <path d="M50,50 L0,50 A50,50 0 0,1 14.6,14.6 Z" fill="#ec4899" />
-                    <path d="M50,50 L14.6,14.6 A50,50 0 0,1 50,0 Z" fill="#f97316" />
+                    <path d="M50,50 L14.6,85.3 A50,50 0 0,1 0,50 Z" fill="#059669" />
+                    <path d="M50,50 L0,50 A50,50 0 0,1 14.6,14.6 Z" fill="#9ca3af" />
+                    <path d="M50,50 L14.6,14.6 A50,50 0 0,1 50,0 Z" fill="#7c3aed" />
                   </g>
-                  
-                  {/* Outer circle decoration */}
                   <circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-                  {/* Core hub */}
                   <circle cx="50" cy="50" r="10" fill="#2e1065" stroke="white" strokeWidth="2" />
                 </svg>
 
-                {/* Emojis superimposed over wheel slots */}
-                <span className="absolute top-[18%] left-[64%] z-10 text-xs text-white origin-center transform rotate-[22deg]">🪙</span>
-                <span className="absolute top-[42%] left-[78%] z-10 text-xs text-white origin-center transform rotate-[67deg]">🌈</span>
-                <span className="absolute top-[68%] left-[64%] z-10 text-xs text-white origin-center transform rotate-[112deg]">👑</span>
-                <span className="absolute top-[78%] left-[42%] z-10 text-xs text-white origin-center transform rotate-[157deg]">🤠</span>
-                <span className="absolute top-[68%] left-[18%] z-10 text-xs text-white origin-center transform rotate-[202deg]">🪙</span>
-                <span className="absolute top-[42%] left-[10%] z-10 text-xs text-white origin-center transform rotate-[247deg]">⚡</span>
-                <span className="absolute top-[18%] left-[18%] z-10 text-xs text-white origin-center transform rotate-[292deg]">🔥</span>
-                <span className="absolute top-[8%] left-[42%] z-10 text-xs text-white origin-center transform rotate-[337deg]">🎟️</span>
+                <span className="absolute top-[18%] left-[64%] z-10 text-[10px] font-black text-white">1</span>
+                <span className="absolute top-[42%] left-[78%] z-10 text-[9px] font-bold text-gray-700">—</span>
+                <span className="absolute top-[68%] left-[64%] z-10 text-[10px] font-black text-white">3</span>
+                <span className="absolute top-[78%] left-[42%] z-10 text-[9px] font-bold text-gray-700">—</span>
+                <span className="absolute top-[68%] left-[18%] z-10 text-[10px] font-black text-white">1</span>
+                <span className="absolute top-[42%] left-[10%] z-10 text-[10px] font-black text-white">3</span>
+                <span className="absolute top-[18%] left-[18%] z-10 text-[9px] font-bold text-gray-700">—</span>
+                <span className="absolute top-[8%] left-[42%] z-10 text-[10px] font-black text-white">1</span>
               </div>
             </div>
 
@@ -715,7 +709,11 @@ export function Beneficios() {
                     {ruletaResult.label}
                   </p>
                   <p className="text-[10px] text-purple-600 mt-1 uppercase font-bold tracking-wider">
-                    {ruletaResult.type === "cosmetic" ? "¡Agregado a tu apariencia!" : "Acreditado a tu saldo"}
+                    {ruletaResult.type === "empty"
+                      ? "Sin premio esta vez"
+                      : ruletaResult.type === "coins"
+                      ? "Acreditado a tu saldo (con límite diario)"
+                      : "Premio aplicado"}
                   </p>
                 </div>
 

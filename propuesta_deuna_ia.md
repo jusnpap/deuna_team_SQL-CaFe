@@ -19,7 +19,7 @@ Ante la falta de alternativas formales, los microcomerciantes e individuos recur
 
 ### D. El Dilema del Techo de Usura y la Viabilidad Financiera
 El Banco Central del Ecuador (BCE) regula estrictamente las tasas de interés efectivas máximas. Para el segmento de microcrédito minorista y autoempleo, el tope legal ronda el **28% nominal anual**.
-* **El desafío del nanocrédito personal:** Si prestamos **$3.50** a 15 días bajo una tasa del 28% anual, el interés generado es de apenas **$0.04** (4 centavos de dólar). Un ingreso de 4 centavos no alcanza a cubrir el costo de enviar el mensaje SMS de confirmación, mucho menos el costo de procesamiento tecnológico de la transacción.
+* **El desafío del nanocrédito personal:** Si prestamos **$3.50** a 7 días bajo una tasa del 28% anual, el interés generado es de apenas **$0.02** (2 centavos de dólar). Un ingreso tan bajo no alcanza a cubrir el costo de enviar el mensaje SMS de confirmación, mucho menos el costo de procesamiento tecnológico de la transacción.
 * **Consecuencia:** La banca formal nunca ofrecerá créditos tan pequeños a corto plazo porque perdería dinero en cada operación, dejando a la población desatendida.
 
 ---
@@ -34,8 +34,8 @@ flowchart TD
     
     B -->|Usuario Persona| C[Deuna Chance]
     C --> C1[Montos: $3.50 | $7.50 | $10.00]
-    C --> C2[Plazo: 15 días]
-    C --> C3[Costo: $0.00 de Interés + $0.50 Gasto Aplicativo]
+    C --> C2[Plazo: 7 días]
+    C --> C3[Costo: $0.00 de Interés + $0.25 Gasto Aplicativo]
     C --> C4[Aceptación transparente: UX 2 clicks y Leer más]
     
     B -->|Comercio / Veci| D[Deuna Negocio]
@@ -48,8 +48,8 @@ flowchart TD
 ### A. Deuna Chance (Para Personas)
 Diseñado para resolver emergencias inmediatas (pago de transporte, saldo móvil, medicina básica o comida).
 * **Montos fijos pre-aprobados:** $3.50, $7.50 o $10.00.
-* **Plazo:** 15 días.
-* **Estructura legal y transparente:** Para no infringir la ley de usura del BCE y al mismo tiempo hacer sostenible la tecnología, Deuna cobra **0% de interés** sobre el capital y aplica una tarifa plana única de **$0.50** bajo el concepto de **"Gastos de Aplicativos" (Tech Platform Fee)**. El usuario ve exactamente cuánto va a pagar desde el primer segundo de forma transparente.
+* **Plazo:** 7 días.
+* **Estructura legal y transparente:** Para no infringir la ley de usura del BCE y al mismo tiempo hacer sostenible la tecnología, Deuna cobra **0% de interés** sobre el capital y aplica una tarifa plana única de **$0.25** bajo el concepto de **"Gastos de Aplicativos" (Tech Platform Fee)**. El usuario ve exactamente cuánto va a pagar desde el primer segundo de forma transparente.
 * **Fricción mínima (2 clics):** Los términos y condiciones están resumidos en una interfaz colapsable `[Leer más...]`. Con un check de consentimiento (Clic 1) y el botón de solicitar (Clic 2), el crédito se deposita de inmediato en la billetera virtual.
 
 ### B. Deuna Negocio (Para el "Veci")
@@ -84,14 +84,32 @@ Este modelo genera un **círculo virtuoso de rentabilidad, tracción y datos** p
    * **Cofres Inteligentes:** Cofres diarios (Bronce, Plata, Oro) que se desbloquean según el puntaje de confianza.
    * **Tienda de Monedas (Coins):** Monedas virtuales obtenidas por transaccionar y pagar a tiempo, que pueden ser canjeadas por cosméticos visuales premium o boletos para la ruleta.
    * **Ruleta de Premios:** Habilita beneficios reales o lúdicos, manteniendo al usuario conectado diariamente a la app.
-3. **Loop de Datos no Tradicionales para Análisis de Riesgo:** Cada acción del usuario (abrir el cofre diario, la consistencia de sus canjes en la tienda, el volumen transaccional, etc.) se convierte en un dato útil. Estos datos alimentan constantemente los algoritmos de IA, perfeccionando la toma de decisiones.
+3. **Loop de Datos no Tradicionales para Análisis de Riesgo:** Cada acción del usuario (abrir el cofre cada 12 h, la consistencia de sus canjes en la tienda, el volumen transaccional, etc.) se convierte en un dato útil. Estos datos alimentan constantemente los algoritmos de IA, perfeccionando la toma de decisiones.
+
+### C. Economía de Deuna Coins (Anti-abuso en el prototipo FINS)
+
+Para evitar sobreexplotación del sistema de recompensas, el prototipo aplica **límites diarios** y reglas claras:
+
+| Fuente | Recompensa | Tope diario |
+| :--- | :--- | :--- |
+| Transferencias | +1 Coin por evento | 6 Coins |
+| Recargas | +1 Coin | 8 Coins |
+| Pagos QR | +1 Coin | 10 Coins |
+| Cofre inteligente | 1–2 Coins (según tier) | 4 Coins |
+| Ruleta | +1 o +3 Coins (o vacío) | 12 Coins |
+| **Ahorro en cuenta** | +1 Coin si saldo ≥ **$5** por **24 h** continuas | 1 Coin |
+| **Total global** | — | **30 Coins/día** |
+
+* **Ruleta:** solo premios de 1 y 3 monedas más segmentos sin premio; sin cosméticos ni XP directos en el giro.
+* **Cofre:** cooldown de **12 horas** entre aperturas; recompensas reducidas y probabilidad baja de cosméticos.
+* **Bono ahorro:** incentiva mantener liquidez mínima en la billetera ($5) durante un día completo, alineado con salud financiera conductual.
 4. **Bancarización y Escalabilidad Financiera (Cross-selling):** Deuna ayuda al comerciante informal a construir un historial de crédito reportado formalmente ante el Buró de Crédito del Ecuador. En el futuro, Deuna o su banco asociado pueden ofrecerles créditos de gran envergadura (créditos comerciales para locales, vehículos, etc.), fidelizando al cliente de por vida.
 
 ---
 
 ## 5. El Cerebro Detrás del Crédito: Funcionamiento de la IA
 
-La Inteligencia Artificial en Deuna es el motor que permite automatizar decisiones en segundos sin intervención humana, reduciendo el costo operativo a cero y controlando el riesgo de impago. Se divide en dos pilares fundamentales: **Predicciones del Negocio** y el **Score de Confianza (Pulso Score)**.
+La Inteligencia Artificial en Deuna es el motor que permite automatizar decisiones en segundos sin intervención humana, reduciendo el costo operativo a cero y controlando el riesgo de impago. Se divide en dos pilares fundamentales: **Predicciones del Negocio** y el **Tu nivel deuna**.
 
 ---
 
@@ -121,9 +139,9 @@ Este motor predice la salud de caja, la capacidad de pago y el comportamiento fu
 
 ---
 
-### B. ¿Cómo se aplica la IA al Score ("Pulso Score") y qué tipo de IA se usa?
+### B. ¿Cómo se aplica la IA a Tu nivel deuna y qué tipo de IA se usa?
 
-El **Pulso Score** es el puntaje crediticio alternativo de Deuna (de 0 a 100). En lugar de usar reportes de centrales de riesgo tradicionales (que suelen estar vacías para usuarios informales), la IA analiza variables de comportamiento digital y psicometría transaccional.
+**Tu nivel deuna** es el puntaje crediticio alternativo de Deuna (de 0 a 100). En lugar de usar reportes de centrales de riesgo tradicionales (que suelen estar vacías para usuarios informales), la IA analiza variables de comportamiento digital y psicometría transaccional.
 
 #### 1. Tipos de IA y Algoritmos Utilizados
 
@@ -140,7 +158,7 @@ El **Pulso Score** es el puntaje crediticio alternativo de Deuna (de 0 a 100). E
 
 #### 2. Variables de Entrada (Features) Alimentadas a la IA del Score
 
-La genialidad del **Pulso Score** radica en que procesa variables conductuales derivadas de la interacción lúdica y transaccional diaria del usuario en la app:
+La genialidad de **Tu nivel deuna** radica en que procesa variables conductuales derivadas de la interacción lúdica y transaccional diaria del usuario en la app:
 
 | Categoría de Feature | Variable Específica | Significado Psicológico e Impacto en el Modelo de IA |
 | :--- | :--- | :--- |
@@ -153,13 +171,13 @@ La genialidad del **Pulso Score** radica en que procesa variables conductuales d
 
 #### 3. Cómo Afecta el Score a la Gamificación en Tiempo Real
 
-El **Pulso Score** no es solo un número frío guardado en el servidor; muta visualmente la interfaz y experiencia del usuario de forma dinámica:
+**Tu nivel deuna** no es solo un número frío guardado en el servidor; muta visualmente la interfaz y experiencia del usuario de forma dinámica:
 
 * **Evolución del Cofre Inteligente:**
   * **Rango de Score < 56 (Cofre de Bronce 📦):** Acceso a recompensas básicas de monedas. Refleja un perfil de confianza inicial o de riesgo alto.
   * **Rango de Score 56 a 75 (Cofre de Plata 🎁):** Duplica la ganancia de monedas virtuales y añade un porcentaje de probabilidad de obtener artículos cosméticos raros.
   * **Rango de Score >= 76 (Cofre de Oro 👑):** El cofre brilla intensamente con diseño dorado premium. Ofrece las máximas recompensas diarias del club, alta probabilidad de obtener accesorios exclusivos de estatus visual y habilita tasas preferenciales de crédito.
-* **Activación de Límites y Condiciones Financieras:** El incremento del Score desbloquea de inmediato límites de crédito de hasta **$300.00** en el simulador y reduce la retención diaria de ventas QR al **6%**.
+* **Activación de Límites y Condiciones Financieras:** El incremento de Tu nivel deuna desbloquea de inmediato límites de crédito de hasta **$300.00** en el simulador y reduce la retención diaria de ventas QR al **6%**.
 
 ---
 
@@ -168,7 +186,7 @@ El **Pulso Score** no es solo un número frío guardado en el servidor; muta vis
 La propuesta de valor de Deuna integra perfectamente la ingeniería financiera, la gamificación interactiva y los modelos más avanzados de Inteligencia Artificial para crear una solución única en el mercado ecuatoriano:
 
 ```
-[Comportamiento Responsable y Gamificación] ──> [Mejora del Pulso Score (IA XGBoost)] ──> [Acceso a Mejores Cofres y Más Beneficios] ──> [Mejores Condiciones de Crédito y Mayor Capital] ──> [Crecimiento de Negocios y Cero Usura Informal]
+[Comportamiento Responsable y Gamificación] ──> [Mejora de Tu nivel deuna (IA XGBoost)] ──> [Acceso a Mejores Cofres y Más Beneficios] ──> [Mejores Condiciones de Crédito y Mayor Capital] ──> [Crecimiento de Negocios y Cero Usura Informal]
 ```
 
 Al premiar e incentivar los hábitos financieros saludables a través de mecánicas divertidas (cofres, ruletas, coins), Deuna transforma el proceso de endeudamiento en una experiencia amigable y motivadora. Mientras los usuarios juegan, ahorran e impulsan sus negocios mediante cobros QR, alimentan con datos valiosos al motor de Inteligencia Artificial. Esto nos permite predecir flujos de caja, otorgar microcréditos formales a tasas reguladas justas del 28% nominal anual, y erradicar el peligroso e informal flagelo del "chulco" en el Ecuador.

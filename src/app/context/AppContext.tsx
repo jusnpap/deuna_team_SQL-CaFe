@@ -6,6 +6,7 @@ import {
   type ChestTier,
   type RuletaPrize,
   RULETA_PRIZES,
+  CHEST_REWARDS,
   canRequestChance,
   getMaxChanceAmount,
   getChestTierForPulso,
@@ -14,7 +15,22 @@ import {
   getVeciRetentionRate,
   getTodayDateKey,
   isChanceAmountUnlocked,
+  CHANCE_LOAN_TERM_DAYS,
+  CHANCE_DEFAULT_SIMULATED_PAY_DAY,
+  CHANCE_LATE_PAYMENT_DAY,
+  getChanceLoanTotal,
+  isEarlyChanceRepayment,
 } from "../lib/creditRules";
+import {
+  BALANCE_HOLD_DURATION_MS,
+  CHEST_COOLDOWN_MS,
+  COIN_REWARD_PER_EVENT,
+  MIN_BALANCE_FOR_SAVINGS_COIN,
+  type CoinAwardResult,
+  type CoinEarningSource,
+  computeCoinAward,
+  createEmptyDailyCoinEarnings,
+} from "../lib/coinLimits";
 
 export interface Transaction {
   id: string;
@@ -27,7 +43,8 @@ export interface Transaction {
     | "qr_pay"
     | "veci_repayment"
     | "veci_loan"
-    | "shop";
+    | "shop"
+    | "balance_hold";
   description: string;
   amount: number;
   xpAwarded?: number;
@@ -107,6 +124,12 @@ export interface AppContextType {
   setActiveProfileMode: React.Dispatch<React.SetStateAction<"personal" | "veci">>;
   veciDailySales: number;
   setVeciDailySales: React.Dispatch<React.SetStateAction<number>>;
+  tryEarnCoinsFromTransfer: () => CoinAwardResult;
+  tryEarnCoinsFromRecharge: () => CoinAwardResult;
+  tryEarnCoinsFromQrPay: () => CoinAwardResult;
+  coinsEarnedToday: Record<CoinEarningSource, number>;
+  balanceHoldSince: number | null;
+  savingsCoinMsRemaining: number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -133,6 +156,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [chestsOpenedToday, setChestsOpenedToday] = useState<Record<string, boolean>>({});
   const [chestCooldownUntil, setChestCooldownUntil] = useState<number>(0);
   const [chestResetDate, setChestResetDate] = useState<string>(getTodayDateKey());
+  const [coinsEarnedToday, setCoinsEarnedToday] = useState(createEmptyDailyCoinEarnings);
+  const [coinsResetDate, setCoinsResetDate] = useState<string>(getTodayDateKey());
+  const [balanceHoldSince, setBalanceHoldSince] = useState<number | null>(null);
+  const [lastBalanceHoldCoinAt, setLastBalanceHoldCoinAt] = useState<number>(0);
+  const [savingsCoinTicker, setSavingsCoinTicker] = useState<number>(Date.now());
   const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(false);
 
   const [transactions, setTransactions] = useState<Transaction[]>([
@@ -176,16 +204,129 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     setVeciCreditLimit(computeVeciCreditLimit(amount));
   }, []);
 
-  // Reinicio diario del cofre
+  // Reinicio diario del cofre y contadores de coins
   useEffect(() => {
     const today = getTodayDateKey();
     if (chestResetDate !== today) {
       setChestsOpenedToday({});
       setChestResetDate(today);
     }
-  }, [chestResetDate]);
+    if (coinsResetDate !== today) {
+      setCoinsEarnedToday(createEmptyDailyCoinEarnings());
+      setCoinsResetDate(today);
+    }
+  }, [chestResetDate, coinsResetDate]);
 
-  // Cosméticos por nivel de Pulso
+  const applyCoinReward = useCallback(
+    (source: CoinEarningSource, requested: number): CoinAwardResult => {
+      let award: CoinAwardResult = {
+        granted: 0,
+        requested,
+        source,
+        limited: requested > 0,
+        reason: requested > 0 ? "Sin cupo disponible." : undefined,
+      };
+
+      setCoinsEarnedToday((prev) => {
+        const total = (Object.keys(prev) as CoinEarningSource[]).reduce(
+          (sum, key) => sum + prev[key],
+          0
+        );
+        award = computeCoinAward(source, requested, prev, total);
+        if (award.granted <= 0) return prev;
+        return { ...prev, [source]: prev[source] + award.granted };
+      });
+
+      if (award.granted > 0) {
+        setCoins((c) => c + award.granted);
+      }
+      return award;
+    },
+    []
+  );
+
+  const tryEarnCoinsFromTransfer = useCallback(
+    () => applyCoinReward("transfer", COIN_REWARD_PER_EVENT.transfer),
+    [applyCoinReward]
+  );
+
+  const tryEarnCoinsFromRecharge = useCallback(
+    () => applyCoinReward("recharge", COIN_REWARD_PER_EVENT.recharge),
+    [applyCoinReward]
+  );
+
+  const tryEarnCoinsFromQrPay = useCallback(
+    () => applyCoinReward("qr_pay", COIN_REWARD_PER_EVENT.qr_pay),
+    [applyCoinReward]
+  );
+
+  const savingsCoinMsRemaining = useMemo(() => {
+    if (balance < MIN_BALANCE_FOR_SAVINGS_COIN || !balanceHoldSince) {
+      return BALANCE_HOLD_DURATION_MS;
+    }
+    const heldMs = savingsCoinTicker - balanceHoldSince;
+    const cooldownOk =
+      lastBalanceHoldCoinAt === 0 ||
+      savingsCoinTicker - lastBalanceHoldCoinAt >= BALANCE_HOLD_DURATION_MS;
+    if (!cooldownOk) {
+      return Math.max(
+        0,
+        BALANCE_HOLD_DURATION_MS - (savingsCoinTicker - lastBalanceHoldCoinAt)
+      );
+    }
+    return Math.max(0, BALANCE_HOLD_DURATION_MS - heldMs);
+  }, [balance, balanceHoldSince, lastBalanceHoldCoinAt, savingsCoinTicker]);
+
+  // Saldo ≥ $5: inicia/reinicia conteo; < $5: pierde progreso
+  useEffect(() => {
+    if (balance >= MIN_BALANCE_FOR_SAVINGS_COIN) {
+      setBalanceHoldSince((prev) => prev ?? Date.now());
+    } else {
+      setBalanceHoldSince(null);
+    }
+  }, [balance]);
+
+  // Revisa cada 30s si cumplió 24 h continuas con ≥ $5
+  useEffect(() => {
+    const interval = setInterval(() => setSavingsCoinTicker(Date.now()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (balance < MIN_BALANCE_FOR_SAVINGS_COIN || !balanceHoldSince) return;
+
+    const heldMs = Date.now() - balanceHoldSince;
+    if (heldMs < BALANCE_HOLD_DURATION_MS) return;
+
+    const sinceLastCoin = Date.now() - lastBalanceHoldCoinAt;
+    if (lastBalanceHoldCoinAt > 0 && sinceLastCoin < BALANCE_HOLD_DURATION_MS) return;
+
+    const award = applyCoinReward("balance_hold", 1);
+    if (award.granted > 0) {
+      setLastBalanceHoldCoinAt(Date.now());
+      setBalanceHoldSince(Date.now());
+      const now = new Date().toLocaleTimeString("es-EC", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const savingsTx: Transaction = {
+        id: `tx_savings_${Date.now()}`,
+        type: "balance_hold",
+        description: "Bono Ahorro: $5+ en cuenta por 24 h",
+        amount: award.granted,
+        date: `Hoy | ${now}`,
+      };
+      setTransactions((prev) => [savingsTx, ...prev]);
+    }
+  }, [
+    balance,
+    balanceHoldSince,
+    lastBalanceHoldCoinAt,
+    savingsCoinTicker,
+    applyCoinReward,
+  ]);
+
+  // Cosméticos por nivel deuna
   useEffect(() => {
     setUnlockedCosmetics((prev) => {
       const next = new Set(prev);
@@ -223,8 +364,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     if (activeCredit) {
       const totalDue = activeCredit.total;
-      const repayDay = forceRepaymentDay !== undefined ? forceRepaymentDay : 8;
-      const isEarly = repayDay < 10;
+      const repayDay =
+        forceRepaymentDay !== undefined ? forceRepaymentDay : CHANCE_DEFAULT_SIMULATED_PAY_DAY;
+      const isEarly = isEarlyChanceRepayment(repayDay);
       setPaymentRepaySpeed(isEarly ? "early" : "late");
 
       if (amount >= totalDue) {
@@ -333,6 +475,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       };
       setTransactions((prev) => [rechargeTx, ...prev]);
     }
+    tryEarnCoinsFromRecharge();
   };
 
   const requestSalvavidas = (amount: number): boolean => {
@@ -342,16 +485,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const allowed = CHANCE_AMOUNTS.find((a) => a === amount);
     if (!allowed || !checkChanceUnlocked(allowed)) return false;
 
-    const interest = 0.2875;
-    const total = amount + interest;
+    const { platformFee, total } = getChanceLoanTotal(amount);
     const now = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
 
     setActiveCredit({
       amount,
-      interest,
+      interest: platformFee,
       total,
       date: `Hoy | ${now}`,
-      daysRemaining: 15,
+      daysRemaining: CHANCE_LOAN_TERM_DAYS,
     });
     setChanceAvailableBalance(amount);
     updatePulsoScore(-3);
@@ -375,8 +517,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const now = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
     const totalDue = activeCredit.total;
-    const repayDay = forceRepaymentDay !== undefined ? forceRepaymentDay : 8;
-    const isEarly = repayDay < 10;
+    const repayDay =
+      forceRepaymentDay !== undefined ? forceRepaymentDay : CHANCE_DEFAULT_SIMULATED_PAY_DAY;
+    const isEarly = isEarlyChanceRepayment(repayDay);
     setPaymentRepaySpeed(isEarly ? "early" : "late");
 
     setBalance((prev) => prev - totalDue);
@@ -398,43 +541,37 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const openChest = (tier: ChestTier) => {
+    if (Date.now() < chestCooldownUntil) {
+      return { xp: 0, coins: 0, spins: 0 };
+    }
+
     const allowedTier = getChestTierForPulso(pulsoScore);
     const effectiveTier = tier === allowedTier ? tier : allowedTier;
+    const rewards = CHEST_REWARDS[effectiveTier];
 
     setChestsOpenedToday((prev) => ({ ...prev, [effectiveTier]: true }));
-    setChestCooldownUntil(Date.now() + 24 * 60 * 60 * 1000);
+    setChestCooldownUntil(Date.now() + CHEST_COOLDOWN_MS);
     const now = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
 
-    let xpGain = 0;
-    let coinGain = 0;
-    let spinsGain = 0;
     let cosmeticReward: string | undefined;
-
-    if (effectiveTier === "bronce") {
-      xpGain = 10;
-      coinGain = 2;
-    } else if (effectiveTier === "plata") {
-      xpGain = 25;
-      coinGain = 5;
-      spinsGain = 1;
-      if (!unlockedCosmetics.includes("border_green") && Math.random() < 0.5) {
+    if (effectiveTier === "plata") {
+      if (!unlockedCosmetics.includes("border_green") && Math.random() < rewards.cosmeticChance) {
         cosmeticReward = "border_green";
       }
-    } else {
-      xpGain = 50;
-      coinGain = 15;
-      spinsGain = 1;
+    } else if (effectiveTier === "diamante") {
       const possibleCosmetics = ["border_fire", "accessory_crown", "accessory_chef"].filter(
         (c) => !unlockedCosmetics.includes(c)
       );
-      if (possibleCosmetics.length > 0 && Math.random() < 0.6) {
+      if (possibleCosmetics.length > 0 && Math.random() < rewards.cosmeticChance) {
         cosmeticReward = possibleCosmetics[Math.floor(Math.random() * possibleCosmetics.length)];
       }
     }
 
-    earnXP(xpGain);
-    setCoins((prev) => prev + coinGain);
-    if (spinsGain > 0) setRuletaSpins((prev) => prev + spinsGain);
+    const coinAward = applyCoinReward("chest", rewards.coins);
+    const coinGain = coinAward.granted;
+
+    earnXP(rewards.xp);
+    if (rewards.spins > 0) setRuletaSpins((prev) => prev + rewards.spins);
     if (cosmeticReward) {
       setUnlockedCosmetics((prev) => [...prev, cosmeticReward!]);
     }
@@ -444,17 +581,22 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       type: "chest",
       description: `Cofre ${effectiveTier.charAt(0).toUpperCase() + effectiveTier.slice(1)} abierto!`,
       amount: coinGain,
-      xpAwarded: xpGain,
+      xpAwarded: rewards.xp,
       date: `Hoy | ${now}`,
     };
     setTransactions((prev) => [chestTx, ...prev]);
 
-    return { xp: xpGain, coins: coinGain, spins: spinsGain, cosmetic: cosmeticReward };
+    return {
+      xp: rewards.xp,
+      coins: coinGain,
+      spins: rewards.spins,
+      cosmetic: cosmeticReward,
+    };
   };
 
   const spinRuleta = (forcedPrizeIndex?: number): RuletaSpinResult => {
     if (ruletaSpins <= 0) {
-      return { label: "Sin giros", type: "xp", value: 0, index: 0 };
+      return { label: "Sin giros", type: "empty", value: 0, index: 0 };
     }
 
     setRuletaSpins((prev) => prev - 1);
@@ -465,23 +607,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         : Math.floor(Math.random() * RULETA_PRIZES.length);
     const prize = RULETA_PRIZES[prizeIndex];
 
+    let coinsGranted = 0;
     if (prize.type === "coins") {
-      setCoins((prev) => prev + (prize.value as number));
-    } else if (prize.type === "xp") {
-      earnXP(prize.value as number);
-    } else if (prize.type === "cosmetic") {
-      const cosmeticId = prize.value as string;
-      if (!unlockedCosmetics.includes(cosmeticId)) {
-        setUnlockedCosmetics((prev) => [...prev, cosmeticId]);
-      }
+      const award = applyCoinReward("ruleta", prize.value as number);
+      coinsGranted = award.granted;
     }
 
     const ruletaTx: Transaction = {
       id: `tx_ruleta_${Date.now()}`,
       type: "ruleta",
       description: `Giro de Ruleta: ${prize.label}`,
-      amount: prize.type === "coins" ? (prize.value as number) : 0,
-      xpAwarded: prize.type === "xp" ? (prize.value as number) : 0,
+      amount: coinsGranted,
       date: `Hoy | ${now}`,
     };
     setTransactions((prev) => [ruletaTx, ...prev]);
@@ -528,6 +664,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       date: `Hoy | ${now}`,
     };
     setTransactions((prev) => [qrTx, ...prev]);
+    tryEarnCoinsFromQrPay();
     return true;
   };
 
@@ -568,10 +705,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const simulateVeciQRSale = (amount: number) => {
     const now = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
 
-    // Deduct 2% sales commission
-    const commission = amount * 0.02;
+    const commission = 0;
     let retentionAmt = 0;
-    let actualCredited = amount - commission;
+    let actualCredited = amount;
     let isPaidOff = false;
 
     // Increment simulated daily sales in context
@@ -580,11 +716,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     if (veciActiveCredit) {
       retentionAmt = amount * veciActiveCredit.retentionRate;
-      actualCredited = amount - commission - retentionAmt;
+      actualCredited = amount - retentionAmt;
       const newRemaining = Math.max(0, veciActiveCredit.remaining - retentionAmt);
       isPaidOff = newRemaining === 0;
 
-      // Credit the merchant the actual credited amount (net of commission and debt retention)
       setBalance((prev) => prev + actualCredited);
 
       if (isPaidOff) {
@@ -613,19 +748,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const saleTx: Transaction = {
         id: `tx_vsale_${Date.now()}`,
         type: "recharge",
-        description: `Venta QR Recibida (Comisión Deuna 2%: -$${commission.toFixed(2)})`,
-        amount: amount - commission,
+        description: `Venta QR Recibida`,
+        amount: amount,
         date: `Hoy | ${now}`,
       };
       setTransactions((prev) => [saleTx, retentionTx, ...prev]);
     } else {
-      // Merchant receives net amount (amount minus 2% commission)
       setBalance((prev) => prev + actualCredited);
       earnXP(2);
       const saleTx: Transaction = {
         id: `tx_vsale_${Date.now()}`,
         type: "recharge",
-        description: `Venta QR Recibida (Comisión Deuna 2%: -$${commission.toFixed(2)})`,
+        description: `Venta QR Recibida`,
         amount: actualCredited,
         date: `Hoy | ${now}`,
       };
@@ -739,6 +873,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         setActiveProfileMode,
         veciDailySales,
         setVeciDailySales,
+        tryEarnCoinsFromTransfer,
+        tryEarnCoinsFromRecharge,
+        tryEarnCoinsFromQrPay,
+        coinsEarnedToday,
+        balanceHoldSince,
+        savingsCoinMsRemaining,
       }}
     >
       {children}
